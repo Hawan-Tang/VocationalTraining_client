@@ -1976,13 +1976,13 @@ var tempI64;
 // === Body ===
 
 var ASM_CONSTS = {
-  2518720: function() {Module['emscripten_get_now_backup'] = performance.now;},  
- 2518775: function($0) {performance.now = function() { return $0; };},  
- 2518823: function($0) {performance.now = function() { return $0; };},  
- 2518871: function() {performance.now = Module['emscripten_get_now_backup'];},  
- 2518926: function() {return Module.webglContextAttributes.premultipliedAlpha;},  
- 2518987: function() {return Module.webglContextAttributes.preserveDrawingBuffer;},  
- 2519051: function() {return Module.webglContextAttributes.powerPreference;}
+  2481344: function() {Module['emscripten_get_now_backup'] = performance.now;},  
+ 2481399: function($0) {performance.now = function() { return $0; };},  
+ 2481447: function($0) {performance.now = function() { return $0; };},  
+ 2481495: function() {performance.now = Module['emscripten_get_now_backup'];},  
+ 2481550: function() {return Module.webglContextAttributes.premultipliedAlpha;},  
+ 2481611: function() {return Module.webglContextAttributes.preserveDrawingBuffer;},  
+ 2481675: function() {return Module.webglContextAttributes.powerPreference;}
 };
 
 
@@ -2372,33 +2372,6 @@ var ASM_CONSTS = {
           }
       }
 
-  var cameraAccess = 0;
-  function _JS_AsyncWebCam_GetPermission(op, onWebcamAccessResponse) {
-  		if (!navigator.mediaDevices) {
-  			cameraAccess = 2;
-  			(function(a1) {  dynCall_vi.apply(null, [onWebcamAccessResponse, a1]); })(op);
-  			return;
-  		}
-  		navigator.mediaDevices.getUserMedia({
-  			audio: false,
-  			video: true
-  		}).then(function(stream) {
-          	//getUserMedia requests for permission (we want this) and starts the webcam (we don't want this), we're going to immediately turn it off after getting permission
-        		var tracks = stream.getVideoTracks();
-        		tracks.forEach(function(track) {
-          		track.stop();
-        		});
-  			cameraAccess = 1;
-  			navigator.mediaDevices.enumerateDevices().then(function(devices) {
-  				updateVideoInputDevices(devices);
-  				(function(a1) {  dynCall_vi.apply(null, [onWebcamAccessResponse, a1]); })(op);
-  			});
-        	}).catch(function(err) {
-  			cameraAccess = 2;
-  			(function(a1) {  dynCall_vi.apply(null, [onWebcamAccessResponse, a1]); })(op);
-        	});
-    	}
-
   function _JS_Cursor_SetImage(ptr, length) {
       var binary = "";
       for (var i = 0; i < length; i++)
@@ -2488,10 +2461,6 @@ var ASM_CONSTS = {
   {
   	fs.sync(false);
   }
-
-  function _JS_GetCurrentCameraAccessState() {
-  		return cameraAccess;
-  	}
 
   var JS_GravitySensor = null;
   function _JS_GravitySensor_IsRunning() {
@@ -4418,152 +4387,6 @@ var ASM_CONSTS = {
   function _JS_UnityEngineShouldQuit() {
   	return !!Module.shouldQuit;
   }
-
-  var activeWebCams = {};
-  function _JS_WebCamVideo_CanPlay(deviceId) {
-  		var webcam = activeWebCams[deviceId];
-  		return webcam && webcam.video.videoWidth > 0 && webcam.video.videoHeight > 0;
-  	}
-
-  function _JS_WebCamVideo_GetDeviceName(deviceId, buffer, bufferSize) {
-  		var webcam = videoInputDevices[deviceId];
-  		var name = webcam ? webcam.name : '(disconnected input #' + (deviceId + 1) + ')';
-  		if (buffer) stringToUTF8(name, buffer, bufferSize);
-  		return lengthBytesUTF8(name);
-  	}
-
-  function _JS_WebCamVideo_GetNativeHeight(deviceId) {
-  		return activeWebCams[deviceId] && activeWebCams[deviceId].video.videoHeight;
-  	}
-
-  function _JS_WebCamVideo_GetNativeWidth(deviceId) {
-  		return activeWebCams[deviceId] && activeWebCams[deviceId].video.videoWidth;
-  	}
-
-  function _JS_WebCamVideo_GetNumDevices() {
-  		var numDevices = 0;
-  		if (!videoInputDevicesEnumerated) {
-  			console.warn(
-  							'WebCam devices were used before being enumerated by the browser. The browser is likely ' +
-  							'pausing WebCam device enumeration due to the page being out of focus while the Unity ' +
-  							'application is being loaded in the background.\n' +
-  							'If you are a developer, you can ensure WebCam devices are enumerated by first requiring ' +
-  							'user interaction.\n' +
-  							'See https://github.com/w3c/mediacapture-main/issues/905 for details.'
-  						);
-  			return numDevices;
-  		}
-  
-  		// If a WebCam is disconnected in the middle of the list,
-  		// we keep reporting that index as (disconnected), so
-  		// find the max ID of devices as the device count.
-  		Object.keys(videoInputDevices).forEach(function(i) {
-  			numDevices = Math.max(numDevices, videoInputDevices[i].id+1);
-  		});
-  
-  		return numDevices;
-  	}
-
-  function _JS_WebCamVideo_IsFrontFacing(deviceId) {
-  		return videoInputDevices[deviceId].isFrontFacing;
-  	}
-
-  function _JS_WebCamVideo_Start(deviceId) {
-  		// Is the given WebCam device already enabled?
-  		if (activeWebCams[deviceId]) {
-  			++activeWebCams[deviceId].refCount;
-  			return;
-  		}
-  
-  		// No webcam exists with given ID?
-  		if (!videoInputDevices[deviceId]) {
-  			console.error('Cannot start video input with ID ' + deviceId + '. No such ID exists! Existing video inputs are:');
-  			console.dir(videoInputDevices);
-  			return;
-  		}
-  
-  		navigator.mediaDevices.getUserMedia({
-  			audio: false,
-  			video: videoInputDevices[deviceId].deviceId ? {
-  				deviceId: { exact: videoInputDevices[deviceId].deviceId }
-  			} : true
-  		}).then(function(stream) {
-  			var video = document.createElement('video');
-  			video.srcObject = stream;
-  
-  			if (/(iPhone|iPad|iPod)/.test(navigator.userAgent)) {
-  				warnOnce('Applying iOS Safari specific workaround to video playback: https://bugs.webkit.org/show_bug.cgi?id=217578');
-  				video.setAttribute('playsinline', '');
-  			}
-  
-  			video.play();
-  			activeWebCams[deviceId] = {
-  				video: video,
-  				stream: stream,
-  				// Webcams will likely operate on a lower framerate than 60fps, i.e. 30/25/24/15 or something like that. We will be polling
-  				// every frame to grab a new video frame, so obtain the actual frame rate of the video device so that we can avoid capturing
-  				// the same video frame multiple times, when we know that a new video frame cannot yet have been produced.
-  				frameLengthInMsecs: 1000 / stream.getVideoTracks()[0].getSettings().frameRate,
-  				nextFrameAvailableTime: 0,
-  				refCount: 1
-  			};
-  		}).catch(function(e) {
-  			console.error('Unable to start video input! ' + e);
-  		});
-  	}
-
-  function _JS_WebCamVideo_Stop(deviceId) {
-  		var webcam = activeWebCams[deviceId];
-  		if (!webcam) return;
-  
-  		if (--webcam.refCount <= 0) {
-  			webcam.video.pause();
-  			webcam.video.srcObject = null;
-  			webcam.stream.getVideoTracks().forEach(function(track) {
-  				track.stop();
-  			});
-  			delete activeWebCams[deviceId];
-  		}
-  	}
-
-  function _JS_WebCamVideo_Update(deviceId, textureId, destWidth, destHeight) {
-  		var webcam = activeWebCams[deviceId];
-  		if (!webcam) return;
-  
-  		//HTML images have the opposite Y direction as GL, so we're telling WebGL to flip the Y of the texture image
-  		GLctx.pixelStorei(GLctx.UNPACK_FLIP_Y_WEBGL, true);
-  
-  		var webCamTexture = webcam.video;
-  
-  		// If we need to do texture resizing, we'll use the canvas to accomplish that, otherwise, we'll upload the video directly,
-  		// if this becomes a performance problem at some point, we can do it using a framebuffer instead
-  		if (webcam.video.videoWidth != destWidth || webcam.video.videoHeight != destHeight)
-  		{
-  			if (!webcam.canvas)
-  			{
-  				webcam.canvas = document.createElement('canvas');
-  			}
-  			var canvas = webcam.canvas;
-  			if (canvas.width != destWidth || canvas.height != destHeight || !webcam.context2d)
-  			{
-  				canvas.width = destWidth;
-  				canvas.height = destHeight;
-  				// Chrome and Firefox bug? After resizing the canvas, the 2D context
-  				// needs to be reacquired or the resize does not apply.
-  				webcam.context2d = canvas.getContext('2d');
-  			}
-  			var context = webcam.context2d;
-              context.drawImage(webcam.video, 0, 0, webcam.video.videoWidth, webcam.video.videoHeight, 0, 0, destWidth, destHeight);
-              webCamTexture = canvas;
-  		}
-  		GLctx.bindTexture(GLctx.TEXTURE_2D, GL.textures[textureId]);
-  		GLctx.texSubImage2D(GLctx.TEXTURE_2D, 0/*mipLevel*/, 0, 0, GLctx.RGBA, GLctx.UNSIGNED_BYTE, webCamTexture);
-  		GLctx.pixelStorei(GLctx.UNPACK_FLIP_Y_WEBGL, false);
-  	}
-
-  function _JS_WebCam_IsSupported() {
-  		return !!navigator.mediaDevices;
-  	}
 
   var wr = {requests:{},responses:{},abortControllers:{},timer:{},nextRequestId:1};
   function _JS_WebRequest_Abort(requestId)
@@ -16047,7 +15870,6 @@ var asmLibraryArg = {
   "JS_Accelerometer_IsRunning": _JS_Accelerometer_IsRunning,
   "JS_Accelerometer_Start": _JS_Accelerometer_Start,
   "JS_Accelerometer_Stop": _JS_Accelerometer_Stop,
-  "JS_AsyncWebCam_GetPermission": _JS_AsyncWebCam_GetPermission,
   "JS_Cursor_SetImage": _JS_Cursor_SetImage,
   "JS_Cursor_SetShow": _JS_Cursor_SetShow,
   "JS_DOM_MapViewportCoordinateToElementLocalCoordinate": _JS_DOM_MapViewportCoordinateToElementLocalCoordinate,
@@ -16055,7 +15877,6 @@ var asmLibraryArg = {
   "JS_Eval_OpenURL": _JS_Eval_OpenURL,
   "JS_FileSystem_Initialize": _JS_FileSystem_Initialize,
   "JS_FileSystem_Sync": _JS_FileSystem_Sync,
-  "JS_GetCurrentCameraAccessState": _JS_GetCurrentCameraAccessState,
   "JS_GravitySensor_IsRunning": _JS_GravitySensor_IsRunning,
   "JS_GravitySensor_Start": _JS_GravitySensor_Start,
   "JS_GravitySensor_Stop": _JS_GravitySensor_Stop,
@@ -16118,16 +15939,6 @@ var asmLibraryArg = {
   "JS_SystemInfo_HasFullscreen": _JS_SystemInfo_HasFullscreen,
   "JS_SystemInfo_HasWebGL": _JS_SystemInfo_HasWebGL,
   "JS_UnityEngineShouldQuit": _JS_UnityEngineShouldQuit,
-  "JS_WebCamVideo_CanPlay": _JS_WebCamVideo_CanPlay,
-  "JS_WebCamVideo_GetDeviceName": _JS_WebCamVideo_GetDeviceName,
-  "JS_WebCamVideo_GetNativeHeight": _JS_WebCamVideo_GetNativeHeight,
-  "JS_WebCamVideo_GetNativeWidth": _JS_WebCamVideo_GetNativeWidth,
-  "JS_WebCamVideo_GetNumDevices": _JS_WebCamVideo_GetNumDevices,
-  "JS_WebCamVideo_IsFrontFacing": _JS_WebCamVideo_IsFrontFacing,
-  "JS_WebCamVideo_Start": _JS_WebCamVideo_Start,
-  "JS_WebCamVideo_Stop": _JS_WebCamVideo_Stop,
-  "JS_WebCamVideo_Update": _JS_WebCamVideo_Update,
-  "JS_WebCam_IsSupported": _JS_WebCam_IsSupported,
   "JS_WebRequest_Abort": _JS_WebRequest_Abort,
   "JS_WebRequest_Create": _JS_WebRequest_Create,
   "JS_WebRequest_GetResponseMetaData": _JS_WebRequest_GetResponseMetaData,
@@ -16429,7 +16240,6 @@ var asmLibraryArg = {
   "invoke_fiii": invoke_fiii,
   "invoke_i": invoke_i,
   "invoke_ii": invoke_ii,
-  "invoke_iifffi": invoke_iifffi,
   "invoke_iifi": invoke_iifi,
   "invoke_iii": invoke_iii,
   "invoke_iiifi": invoke_iiifi,
@@ -16778,9 +16588,6 @@ var dynCall_jijii = Module["dynCall_jijii"] = createExportWrapper("dynCall_jijii
 
 /** @type {function(...*):?} */
 var dynCall_viiiji = Module["dynCall_viiiji"] = createExportWrapper("dynCall_viiiji");
-
-/** @type {function(...*):?} */
-var dynCall_iifffi = Module["dynCall_iifffi"] = createExportWrapper("dynCall_iifffi");
 
 /** @type {function(...*):?} */
 var dynCall_jjji = Module["dynCall_jjji"] = createExportWrapper("dynCall_jjji");
@@ -17212,6 +17019,9 @@ var dynCall_fiifii = Module["dynCall_fiifii"] = createExportWrapper("dynCall_fii
 var dynCall_viiiiiffi = Module["dynCall_viiiiiffi"] = createExportWrapper("dynCall_viiiiiffi");
 
 /** @type {function(...*):?} */
+var dynCall_iifffi = Module["dynCall_iifffi"] = createExportWrapper("dynCall_iifffi");
+
+/** @type {function(...*):?} */
 var dynCall_viiidii = Module["dynCall_viiidii"] = createExportWrapper("dynCall_viiidii");
 
 /** @type {function(...*):?} */
@@ -17434,34 +17244,10 @@ var dynCall_jiiiiiiiii = Module["dynCall_jiiiiiiiii"] = createExportWrapper("dyn
 var dynCall_jiiiiiiiiii = Module["dynCall_jiiiiiiiiii"] = createExportWrapper("dynCall_jiiiiiiiiii");
 
 /** @type {function(...*):?} */
-var dynCall_iiffi = Module["dynCall_iiffi"] = createExportWrapper("dynCall_iiffi");
-
-/** @type {function(...*):?} */
-var dynCall_iiiiiffffffffffffffffi = Module["dynCall_iiiiiffffffffffffffffi"] = createExportWrapper("dynCall_iiiiiffffffffffffffffi");
-
-/** @type {function(...*):?} */
-var dynCall_iiffffi = Module["dynCall_iiffffi"] = createExportWrapper("dynCall_iiffffi");
-
-/** @type {function(...*):?} */
-var dynCall_vifffffffffi = Module["dynCall_vifffffffffi"] = createExportWrapper("dynCall_vifffffffffi");
-
-/** @type {function(...*):?} */
-var dynCall_iffffffffffffffffi = Module["dynCall_iffffffffffffffffi"] = createExportWrapper("dynCall_iffffffffffffffffi");
-
-/** @type {function(...*):?} */
-var dynCall_iffffffffi = Module["dynCall_iffffffffi"] = createExportWrapper("dynCall_iffffffffi");
-
-/** @type {function(...*):?} */
-var dynCall_viiiiiifii = Module["dynCall_viiiiiifii"] = createExportWrapper("dynCall_viiiiiifii");
-
-/** @type {function(...*):?} */
-var dynCall_iifiifi = Module["dynCall_iifiifi"] = createExportWrapper("dynCall_iifiifi");
-
-/** @type {function(...*):?} */
-var dynCall_viiiiiji = Module["dynCall_viiiiiji"] = createExportWrapper("dynCall_viiiiiji");
-
-/** @type {function(...*):?} */
 var dynCall_viifffiii = Module["dynCall_viifffiii"] = createExportWrapper("dynCall_viifffiii");
+
+/** @type {function(...*):?} */
+var dynCall_iiffi = Module["dynCall_iiffi"] = createExportWrapper("dynCall_iiffi");
 
 /** @type {function(...*):?} */
 var dynCall_iiijjii = Module["dynCall_iiijjii"] = createExportWrapper("dynCall_iiijjii");
@@ -17630,6 +17416,9 @@ var dynCall_vffff = Module["dynCall_vffff"] = createExportWrapper("dynCall_vffff
 
 /** @type {function(...*):?} */
 var dynCall_vff = Module["dynCall_vff"] = createExportWrapper("dynCall_vff");
+
+/** @type {function(...*):?} */
+var dynCall_viiiiiji = Module["dynCall_viiiiiji"] = createExportWrapper("dynCall_viiiiiji");
 
 /** @type {function(...*):?} */
 var dynCall_viiiiiiiiiiiiiiiiii = Module["dynCall_viiiiiiiiiiiiiiiiii"] = createExportWrapper("dynCall_viiiiiiiiiiiiiiiiii");
@@ -18069,17 +17858,6 @@ function invoke_viiiifi(index,a1,a2,a3,a4,a5,a6) {
   var sp = stackSave();
   try {
     dynCall_viiiifi(index,a1,a2,a3,a4,a5,a6);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0) throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_iifffi(index,a1,a2,a3,a4,a5) {
-  var sp = stackSave();
-  try {
-    return dynCall_iifffi(index,a1,a2,a3,a4,a5);
   } catch(e) {
     stackRestore(sp);
     if (e !== e+0) throw e;
