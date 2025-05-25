@@ -1,14 +1,82 @@
-<!DOCTYPE html>
-<html lang="en-us">
+<!DOCTYPE html> 
+<html lang="zh-TW">
   <head>
     <meta charset="utf-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- SEO 和社群分享設定 -->
     <title>VocationalTraining_client</title>
+    <meta name="description" content="職訓夢工廠">
+    <meta name="keywords" content="Unity, WebGL, 遊戲, 手機遊戲">
+    
+    <!-- Open Graph (Facebook, Discord 等) -->
+    <meta property="og:title" content="VocationalTraining_client">
+    <meta property="og:description" content="職訓夢工廠-客戶端">
+    <meta property="og:image" content="https://files.catbox.moe/ak16so.png">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="VocationalTraining_client">
+    <meta name="twitter:description" content="職訓夢工廠-客戶端">
+    <meta name="twitter:image" content="https://files.catbox.moe/ak16so.png">
+    
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    
+    <style>
+      /* 確保全螢幕按鈕在所有設備上都顯示 */
+      #unity-fullscreen-button {
+        position: fixed !important;
+        right: 10px;
+        bottom: 10px;
+        width: 44px;
+        height: 44px;
+        background: rgba(0, 0, 0, 0.7);
+        border-radius: 8px;
+        z-index: 1000;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 20px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        transition: all 0.3s ease;
+      }
+      
+      #unity-fullscreen-button:hover {
+        background: rgba(0, 0, 0, 0.9);
+        border-color: rgba(255, 255, 255, 0.6);
+      }
+      
+      #unity-fullscreen-button:active {
+        transform: scale(0.95);
+      }
+      
+      /* 手機設備優化 */
+      @media only screen and (max-width: 767px) {
+        #unity-fullscreen-button {
+          width: 48px;
+          height: 48px;
+          right: 15px;
+          bottom: 15px;
+          font-size: 22px;
+        }
+      }
+      
+      /* 全螢幕圖示 */
+      .fullscreen-icon::before {
+        content: "⛶";
+      }
+      
+      .exit-fullscreen-icon::before {
+        content: "⛉";
+      }
+    </style>
   </head>
   <body class="dark">
     <div id="unity-container">
@@ -23,7 +91,10 @@
         <div class="spinner"></div>
       </div>
     </div>
-    <div id="unity-fullscreen-button" style="display: none;"></div>
+    <div id="unity-fullscreen-button" style="display: none;">
+      <span class="fullscreen-icon"></span>
+    </div>
+    
     <script>
       const hideFullScreenButton = "";
       const buildUrl = "Build";
@@ -46,45 +117,72 @@
       const fullscreenButton = document.querySelector("#unity-fullscreen-button");
       const spinner = document.querySelector('.spinner');
 
+      // 改進的全螢幕檢測
+      const canFullscreen = (function() {
+        const element = document.documentElement;
+        return !!(element.requestFullscreen || 
+                 element.webkitRequestFullscreen || 
+                 element.mozRequestFullScreen || 
+                 element.msRequestFullscreen);
+      }());
+
       // 檢測移動設備
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
-      // 檢查全螢幕支援
-      const canFullscreen = (function() {
-        // 檢查標準全螢幕 API
-        if (document.fullscreenEnabled || 
-            document.webkitFullscreenEnabled || 
-            document.mozFullScreenEnabled ||
-            document.msFullscreenEnabled) {
-          return true;
-        }
-        
-        // 檢查退出全螢幕方法
-        for (const key of [
-            'exitFullscreen',
-            'webkitExitFullscreen',
-            'webkitCancelFullScreen',
-            'mozCancelFullScreen',
-            'msExitFullscreen',
-          ]) {
-          if (key in document) {
-            return true;
+      // 全螢幕狀態追蹤
+      let isFullscreen = false;
+      
+      // 全螢幕功能
+      function toggleFullscreen() {
+        if (!isFullscreen) {
+          // 進入全螢幕
+          const element = document.documentElement;
+          if (element.requestFullscreen) {
+            element.requestFullscreen();
+          } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+          } else if (element.mozRequestFullScreen) {
+            element.mozRequestFullScreen();
+          } else if (element.msRequestFullscreen) {
+            element.msRequestFullscreen();
+          }
+        } else {
+          // 退出全螢幕
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          } else if (document.mozCancelFullScreen) {
+            document.mozCancelFullScreen();
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
           }
         }
+      }
+      
+      // 監聽全螢幕狀態變化
+      function updateFullscreenButton() {
+        isFullscreen = !!(document.fullscreenElement || 
+                         document.webkitFullscreenElement || 
+                         document.mozFullScreenElement || 
+                         document.msFullscreenElement);
         
-        // 檢查移動設備特定的全螢幕支援
-        if (isMobile) {
-          // iOS Safari 和某些移動瀏覽器支援特定的全螢幕模式
-          if (document.documentElement.requestFullscreen || 
-              document.documentElement.webkitRequestFullscreen ||
-              'webkitEnterFullScreen' in canvas) {
-            return true;
-          }
+        const icon = fullscreenButton.querySelector('span');
+        if (isFullscreen) {
+          icon.className = 'exit-fullscreen-icon';
+          fullscreenButton.title = '退出全螢幕';
+        } else {
+          icon.className = 'fullscreen-icon';
+          fullscreenButton.title = '進入全螢幕';
         }
-        
-        return false;
-      }());
-
+      }
+      
+      // 監聽全螢幕事件
+      document.addEventListener('fullscreenchange', updateFullscreenButton);
+      document.addEventListener('webkitfullscreenchange', updateFullscreenButton);
+      document.addEventListener('mozfullscreenchange', updateFullscreenButton);
+      document.addEventListener('MSFullscreenChange', updateFullscreenButton);
+      
       if (isMobile) {
         // 移動設備設置
         config.devicePixelRatio = window.devicePixelRatio || 1;
@@ -92,7 +190,6 @@
         // 處理屏幕方向變化
         window.addEventListener('orientationchange', function() {
           setTimeout(function() {
-            // 給瀏覽器一些時間來更新視口尺寸
             resizeGame();
           }, 200);
         });
@@ -101,17 +198,13 @@
         window.addEventListener('resize', resizeGame);
         
         function resizeGame() {
-          const aspectRatio = 16 / 9; // 假設遊戲的理想比例是16:9，根據實際需要調整
-          
           let newWidth = window.innerWidth;
           let newHeight = window.innerHeight;
           
-          // 確保遊戲畫布填滿整個屏幕
           canvas.style.width = newWidth + 'px';
           canvas.style.height = newHeight + 'px';
         }
         
-        // 初始調整大小
         setTimeout(resizeGame, 0);
       }
 
@@ -127,19 +220,15 @@
         }).then((unityInstance) => {
           loadingCover.style.display = "none";
           
-          // 修改這部分邏輯，確保在移動設備上也能顯示全螢幕按鈕
-          if (canFullscreen && hideFullScreenButton !== "true") {
-            fullscreenButton.style.display = "";
-            
-            // 為移動設備添加特定的全螢幕處理
-            if (isMobile) {
-              fullscreenButton.classList.add("mobile-fullscreen");
-            }
-            
-            fullscreenButton.onclick = () => {
-              unityInstance.SetFullscreen(1);
-            };
+          // 總是顯示全螢幕按鈕（除非明確隱藏）
+          if (!hideFullScreenButton) {
+            fullscreenButton.style.display = "flex";
+            updateFullscreenButton();
           }
+          
+          // 綁定全螢幕按鈕事件
+          fullscreenButton.onclick = toggleFullscreen;
+          
         }).catch((message) => {
           alert(message);
         });
@@ -148,8 +237,26 @@
       
       // 防止移動設備上的默認觸摸行為
       document.addEventListener('touchmove', function(e) {
-        e.preventDefault();
+        if (e.target === canvas) {
+          e.preventDefault();
+        }
       }, { passive: false });
+      
+      // 防止雙擊縮放
+      document.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      
+      let lastTouchEnd = 0;
+      document.addEventListener('touchend', function(e) {
+        const now = (new Date()).getTime();
+        if (now - lastTouchEnd <= 300) {
+          e.preventDefault();
+        }
+        lastTouchEnd = now;
+      }, false);
     </script>
   </body>
 </html>
