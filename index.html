@@ -46,7 +46,20 @@
       const fullscreenButton = document.querySelector("#unity-fullscreen-button");
       const spinner = document.querySelector('.spinner');
 
+      // 檢測移動設備
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
+      // 檢查全螢幕支援
       const canFullscreen = (function() {
+        // 檢查標準全螢幕 API
+        if (document.fullscreenEnabled || 
+            document.webkitFullscreenEnabled || 
+            document.mozFullScreenEnabled ||
+            document.msFullscreenEnabled) {
+          return true;
+        }
+        
+        // 檢查退出全螢幕方法
         for (const key of [
             'exitFullscreen',
             'webkitExitFullscreen',
@@ -58,12 +71,20 @@
             return true;
           }
         }
+        
+        // 檢查移動設備特定的全螢幕支援
+        if (isMobile) {
+          // iOS Safari 和某些移動瀏覽器支援特定的全螢幕模式
+          if (document.documentElement.requestFullscreen || 
+              document.documentElement.webkitRequestFullscreen ||
+              'webkitEnterFullScreen' in canvas) {
+            return true;
+          }
+        }
+        
         return false;
       }());
 
-      // 檢測移動設備
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
       if (isMobile) {
         // 移動設備設置
         config.devicePixelRatio = window.devicePixelRatio || 1;
@@ -105,10 +126,16 @@
           progressBarFull.style.width = `${100 * progress}%`;
         }).then((unityInstance) => {
           loadingCover.style.display = "none";
-          if (canFullscreen) {
-            if (!hideFullScreenButton) {
-              fullscreenButton.style.display = "";
+          
+          // 修改這部分邏輯，確保在移動設備上也能顯示全螢幕按鈕
+          if (canFullscreen && hideFullScreenButton !== "true") {
+            fullscreenButton.style.display = "";
+            
+            // 為移動設備添加特定的全螢幕處理
+            if (isMobile) {
+              fullscreenButton.classList.add("mobile-fullscreen");
             }
+            
             fullscreenButton.onclick = () => {
               unityInstance.SetFullscreen(1);
             };

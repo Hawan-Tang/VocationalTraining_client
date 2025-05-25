@@ -113,6 +113,8 @@ body {
     background-size: contain;
     z-index: 10;
     cursor: pointer;
+    display: none; 
+    touch-action: manipulation;
 }
 
 .spinner,
@@ -148,10 +150,10 @@ body {
 /* ����]�ƪ��S�w�˦� */
 @media only screen and (max-width: 767px) {
     #unity-fullscreen-button {
-        width: 32px;
-        height: 32px;
-        right: 8px;
-        bottom: 8px;
+        width: 44px;
+        height: 44px;
+        right: 12px;
+        bottom: 12px;
     }
 
     #unity-progress-bar-empty {
